@@ -170,10 +170,15 @@ def train_one_config(X_train, y_train, X_test, y_test, config):
         for batch_x, batch_y in train_loader:
             batch_x = batch_x.to(device)
             batch_y = batch_y.to(device)
+            # 梯度清零
             optimizer.zero_grad()
+            # 前向传播
             logits = model(batch_x)
+            # 计算损失值
             loss = criterion(logits, batch_y.unsqueeze(1))
+            # 反向传播
             loss.backward()
+            #更新参数
             optimizer.step()
 
     preds = eval_model(model, X_test, batch_size=256, device=device)
