@@ -4,7 +4,9 @@ import glob
 import json
 import jieba
 import joblib
+import numpy as np
 import urllib.parse
+import torch
 from PIL import ImageTk
 from wordcloud import WordCloud
 import pandas as pd
@@ -16,6 +18,7 @@ from datetime import datetime
 from tkinter import messagebox
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from torch import nn
 
 BASE_DIR = os.path.dirname(__file__)
 ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
@@ -103,6 +106,47 @@ def load_model_and_predict(model_path, X_test_vect):
     model = joblib.load(model_path)
     return model.predict(X_test_vect)
 
+
+def build_mlp(input_dim, hidden1, hidden2, dropout):
+    # 与训练脚本保持一致的两层 MLP 结构。
+    return nn.Sequential(
+        nn.Linear(input_dim, hidden1),
+        nn.ReLU(),
+        nn.Dropout(dropout),
+        nn.Linear(hidden1, hidden2),
+        nn.ReLU(),
+        nn.Dropout(dropout),
+        nn.Linear(hidden2, 1),
+    )
+
+
+def load_mlp_and_predict(config_path, model_path, X_test_vect):
+    # 读取网络结构配置，重建模型并加载训练好的权重。
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = json.load(f)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = build_mlp(
+        input_dim=config["input_dim"],
+        hidden1=config["hidden1"],
+        hidden2=config["hidden2"],
+        dropout=config["dropout"],
+    ).to(device)
+
+    state_dict = torch.load(model_path, map_location=device)
+    model.load_state_dict(state_dict)
+    model.eval()
+
+    if hasattr(X_test_vect, "toarray"):
+        X_test_array = X_test_vect.toarray().astype(np.float32)
+    else:
+        X_test_array = np.asarray(X_test_vect, dtype=np.float32)
+
+    with torch.no_grad():
+        logits = model(torch.from_numpy(X_test_array).to(device))
+        probs = torch.sigmoid(logits).cpu().numpy().reshape(-1)
+    return (probs >= 0.5).astype(int)
+
 def spider_main(n_url):
     # 爬取指定新闻 URL 的评论并保存到 data/test
     print("正在获取评论数据，请稍后。。。\n")
@@ -168,22 +212,44 @@ def analyze_sentiment():
             spider_main(n_url)
             latest_csv = get_latest_csv(DATA_TEST_DIR)
             test_data, error_msg = load_data(latest_csv)
+            if error_msg:
+                messagebox.showerror("错误", error_msg)
+                return
             X_new_test = test_data['comment_contents']
             X_new_test_tokenized = X_new_test.apply(clean_and_segment_text)
         selected_algorithm = algorithm_combobox.get()
-        # 统一使用 TF-IDF 向量器转换
-        vect = joblib.load(os.path.join(MODELS_DIR, "tfidf_vectorizer.pkl"))
-        X_new_test_vect = vect.transform(X_new_test_tokenized)
         if selected_algorithm == "朴素贝叶斯":
+            vect_path = os.path.join(MODELS_DIR, "nb_tfidf_vectorizer.pkl")
             model_path = os.path.join(MODELS_DIR, "naive_bayes.pkl")
+            required_paths = [vect_path, model_path]
         elif selected_algorithm == "随机森林":
+            vect_path = os.path.join(MODELS_DIR, "rf_tfidf_vectorizer.pkl")
             model_path = os.path.join(MODELS_DIR, "random_forest.pkl")
+            required_paths = [vect_path, model_path]
+        elif selected_algorithm == "MLP":
+            vect_path = os.path.join(MODELS_DIR, "nn_tfidf_vectorizer.pkl")
+            config_path = os.path.join(MODELS_DIR, "nn_config.json")
+            model_path = os.path.join(MODELS_DIR, "nn_model.pt")
+            required_paths = [vect_path, config_path, model_path]
         else:
             messagebox.showerror("错误", "请选择有效的模型。")
             return
 
+        # 检查当前模型文件是否已训练并保存。
+        missing_files = [path for path in required_paths if not os.path.exists(path)]
+        if missing_files:
+            missing_text = "\n".join(missing_files)
+            messagebox.showerror("错误", f"缺少模型文件，请先完成训练并保存：\n{missing_text}")
+            return
+
+        vect = joblib.load(vect_path)
+        X_new_test_vect = vect.transform(X_new_test_tokenized)
+        if selected_algorithm == "MLP":
+            new_predictions = load_mlp_and_predict(config_path, model_path, X_new_test_vect)
+        else:
+            new_predictions = load_model_and_predict(model_path, X_new_test_vect)
+
         # 预测情感并将结果映射为中文标签
-        new_predictions = load_model_and_predict(model_path, X_new_test_vect)
         test_data['predicted_sentiment'] = new_predictions
         test_data['predicted_sentiment'] = (test_data['predicted_sentiment'].map({1: '积极', 0: '消极'}))
         result_text.delete(1.0, tk.END)
@@ -244,7 +310,7 @@ def analyze_sentiment():
     root.title("情感分析")
     url_label = tk.Label(root, text="请输入 URL 或 文件名: ")
     url_entry = tk.Entry(root, width=160, font=custom_font)
-    algorithm_combobox = ttk.Combobox(root, values=["朴素贝叶斯", "随机森林"], font=custom_font)
+    algorithm_combobox = ttk.Combobox(root, values=["朴素贝叶斯", "随机森林", "MLP"], font=custom_font)
     result_text = tk.Text(root, height=20, width=160, font=custom_font)
     analyze_button = tk.Button(root, text="分析情感", command=fetch_and_analyze)
     label = tk.Label(root)  # 用于显示词云图像的标签
@@ -263,4 +329,3 @@ def analyze_sentiment():
 # 调用主函数
 if __name__ == "__main__":
     analyze_sentiment()
-

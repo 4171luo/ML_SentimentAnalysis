@@ -147,6 +147,7 @@ def main():
         "max_depth": [None, 20, 40],
         "max_features": ["sqrt", "log2"],
     }
+    # k折交叉验证
     cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
     results_frames = []
 
@@ -178,12 +179,30 @@ def main():
     print_report(y_test, pred_tfidf, {0: "消极", 1: "积极"})
 
     results_tfidf = pd.DataFrame(grid_tfidf.cv_results_)
-    results_tfidf["feature_type"] = "tfidf"
-    results_tfidf["test_accuracy"] = np.nan
-    results_tfidf["test_f1_macro"] = np.nan
-    results_tfidf.loc[results_tfidf["rank_test_score"] == 1, "test_accuracy"] = acc_tfidf
-    results_tfidf.loc[results_tfidf["rank_test_score"] == 1, "test_f1_macro"] = f1_tfidf
-    results_frames.append(results_tfidf)
+    for _, row in results_tfidf.iterrows():
+        is_best = int(row["rank_test_score"] == 1)
+        results_frames.append({
+            "model_name": "random_forest",
+            "feature_type": "tfidf",
+            "tuning_method": "grid_search_cv",
+            "selection_score_name": "cv_accuracy",
+            "selection_score": row["mean_test_score"],
+            "val_accuracy": np.nan,
+            "val_f1_macro": np.nan,
+            "test_accuracy": acc_tfidf if is_best else np.nan,
+            "test_f1_macro": f1_tfidf if is_best else np.nan,
+            "alpha": np.nan,
+            "var_smoothing": np.nan,
+            "n_estimators": row["param_n_estimators"],
+            "max_depth": row["param_max_depth"],
+            "max_features": row["param_max_features"],
+            "hidden1": np.nan,
+            "hidden2": np.nan,
+            "dropout": np.nan,
+            "lr": np.nan,
+            "epochs": np.nan,
+            "is_best": is_best,
+        })
 
     # Word2vec 平均向量特征（稠密向量）
     # 仅使用训练集训练 Word2vec，避免验证集信息泄露。
@@ -219,16 +238,33 @@ def main():
     print_report(y_test, pred_w2v, {0: "消极", 1: "积极"})
 
     results_w2v = pd.DataFrame(grid_w2v.cv_results_)
-    results_w2v["feature_type"] = "word2vec"
-    results_w2v["test_accuracy"] = np.nan
-    results_w2v["test_f1_macro"] = np.nan
-    results_w2v.loc[results_w2v["rank_test_score"] == 1, "test_accuracy"] = acc_w2v
-    results_w2v.loc[results_w2v["rank_test_score"] == 1, "test_f1_macro"] = f1_w2v
-    results_frames.append(results_w2v)
+    for _, row in results_w2v.iterrows():
+        is_best = int(row["rank_test_score"] == 1)
+        results_frames.append({
+            "model_name": "random_forest",
+            "feature_type": "word2vec",
+            "tuning_method": "grid_search_cv",
+            "selection_score_name": "cv_accuracy",
+            "selection_score": row["mean_test_score"],
+            "val_accuracy": np.nan,
+            "val_f1_macro": np.nan,
+            "test_accuracy": acc_w2v if is_best else np.nan,
+            "test_f1_macro": f1_w2v if is_best else np.nan,
+            "alpha": np.nan,
+            "var_smoothing": np.nan,
+            "n_estimators": row["param_n_estimators"],
+            "max_depth": row["param_max_depth"],
+            "max_features": row["param_max_features"],
+            "hidden1": np.nan,
+            "hidden2": np.nan,
+            "dropout": np.nan,
+            "lr": np.nan,
+            "epochs": np.nan,
+            "is_best": is_best,
+        })
 
     # 合并不同特征的网格结果，统一输出便于后续统计。
-    results_df = pd.concat(results_frames, ignore_index=True)
-    results_df.to_csv(RESULTS_PATH, index=False, encoding="utf-8")
+    pd.DataFrame(results_frames).to_csv(RESULTS_PATH, index=False, encoding="utf-8")
     print(f"Saved grid results to: {RESULTS_PATH}")
 
 

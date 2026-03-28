@@ -150,6 +150,7 @@ def main():
 
     alphas = [0.1, 0.5, 1.0, 2.0]
     cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
+    # 网格调超参数 
     grid_tfidf = GridSearchCV(
         MultinomialNB(),
         param_grid={"alpha": alphas},
@@ -203,25 +204,60 @@ def main():
     print(f"W2V NB test acc={acc_w2v:.4f} f1_macro={f1_w2v:.4f}")
     print_report(y_test, pred_w2v_test, {0: "消极", 1: "积极"})
 
-    # 汇总网格搜索结果，并在最佳参数行标注测试集指标。
-    results_tfidf = pd.DataFrame(grid_tfidf.cv_results_)
-    results_tfidf["feature_type"] = "tfidf"
-    results_tfidf["test_accuracy"] = np.nan
-    results_tfidf["test_f1_macro"] = np.nan
-    results_tfidf.loc[results_tfidf["rank_test_score"] == 1, "test_accuracy"] = acc_tfidf
-    results_tfidf.loc[results_tfidf["rank_test_score"] == 1, "test_f1_macro"] = f1_tfidf
+    # 将不同特征方案整理为统一的扁平化结果表。
+    result_rows = []
+    for _, row in pd.DataFrame(grid_tfidf.cv_results_).iterrows():
+        is_best = int(row["rank_test_score"] == 1)
+        result_rows.append({
+            "model_name": "naive_bayes",
+            "feature_type": "tfidf",
+            "tuning_method": "grid_search_cv",
+            "selection_score_name": "cv_f1_macro",
+            "selection_score": row["mean_test_score"],
+            "val_accuracy": np.nan,
+            "val_f1_macro": np.nan,
+            "test_accuracy": acc_tfidf if is_best else np.nan,
+            "test_f1_macro": f1_tfidf if is_best else np.nan,
+            "alpha": row["param_alpha"],
+            "var_smoothing": np.nan,
+            "n_estimators": np.nan,
+            "max_depth": np.nan,
+            "max_features": np.nan,
+            "hidden1": np.nan,
+            "hidden2": np.nan,
+            "dropout": np.nan,
+            "lr": np.nan,
+            "epochs": np.nan,
+            "is_best": is_best,
+        })
 
-    results_w2v = pd.DataFrame(grid_w2v.cv_results_)
-    results_w2v["feature_type"] = "word2vec"
-    results_w2v["test_accuracy"] = np.nan
-    results_w2v["test_f1_macro"] = np.nan
-    results_w2v.loc[results_w2v["rank_test_score"] == 1, "test_accuracy"] = acc_w2v
-    results_w2v.loc[results_w2v["rank_test_score"] == 1, "test_f1_macro"] = f1_w2v
+    for _, row in pd.DataFrame(grid_w2v.cv_results_).iterrows():
+        is_best = int(row["rank_test_score"] == 1)
+        result_rows.append({
+            "model_name": "naive_bayes",
+            "feature_type": "word2vec",
+            "tuning_method": "grid_search_cv",
+            "selection_score_name": "cv_f1_macro",
+            "selection_score": row["mean_test_score"],
+            "val_accuracy": np.nan,
+            "val_f1_macro": np.nan,
+            "test_accuracy": acc_w2v if is_best else np.nan,
+            "test_f1_macro": f1_w2v if is_best else np.nan,
+            "alpha": np.nan,
+            "var_smoothing": row["param_var_smoothing"],
+            "n_estimators": np.nan,
+            "max_depth": np.nan,
+            "max_features": np.nan,
+            "hidden1": np.nan,
+            "hidden2": np.nan,
+            "dropout": np.nan,
+            "lr": np.nan,
+            "epochs": np.nan,
+            "is_best": is_best,
+        })
 
     # 统一保存为 CSV，便于汇总对比与绘图。
-    pd.concat([results_tfidf, results_w2v], ignore_index=True).to_csv(
-        RESULTS_PATH, index=False, encoding="utf-8"
-    )
+    pd.DataFrame(result_rows).to_csv(RESULTS_PATH, index=False, encoding="utf-8")
     print(f"Saved metrics to: {RESULTS_PATH}")
 
 

@@ -30,7 +30,7 @@ def tokenize_text(text, stop_words):
     words = jieba.cut(text)
     return [w for w in words if w and w not in stop_words]
 
-
+# 加载数据集
 def load_dataset(path):
     # 优先使用 UTF-8，失败后回退到 GB 编码。
     try:
@@ -149,17 +149,18 @@ def eval_model(model, X_sparse, batch_size, device):
 
 
 def train_one_config(X_train, y_train, X_test, y_test, config):
-    # 单次超参数配置训练 + 测试评估。
+    # 单次超参数配置训练 + 评估。
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    # 将模型参数移动到制定设备（device）
     model = build_mlp(
         input_dim=X_train.shape[1],
         hidden1=config["hidden1"],
         hidden2=config["hidden2"],
         dropout=config["dropout"],
     ).to(device)
-
+    # 损失函数
     criterion = nn.BCEWithLogitsLoss()
+    # 优化器Adam
     optimizer = torch.optim.Adam(model.parameters(), lr=config["lr"])
 
     train_dataset = SparseTfidfDataset(X_train, y_train)
@@ -174,7 +175,7 @@ def train_one_config(X_train, y_train, X_test, y_test, config):
             optimizer.zero_grad()
             # 前向传播
             logits = model(batch_x)
-            # 计算损失值
+            # 计算损失值（预测值/真实值）
             loss = criterion(logits, batch_y.unsqueeze(1))
             # 反向传播
             loss.backward()
@@ -200,14 +201,24 @@ def main():
     texts = [" ".join(tokens) for tokens in tokens_list]
     y = df[label_col].values
 
-    # 按 8:2 拆分训练/测试。
-    X_train_texts, X_test_texts, y_train, y_test = train_test_split(
+    # 先按 8:2 拆分训练验证集与测试集，测试集仅用于最终评估。
+    X_train_val_texts, X_test_texts, y_train_val, y_test = train_test_split(
         texts, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    # 再从训练验证集中划分验证集，用于超参数选择。
+    X_train_texts, X_val_texts, y_train, y_val = train_test_split(
+        X_train_val_texts,
+        y_train_val,
+        test_size=0.2,
+        random_state=42,
+        stratify=y_train_val,
     )
 
     # TF-IDF 特征化（仅在训练集拟合）
     vectorizer = TfidfVectorizer(max_features=TFIDF_MAX_FEATURES, dtype=np.float32)
     X_train = vectorizer.fit_transform(X_train_texts)
+    X_val = vectorizer.transform(X_val_texts)
     X_test = vectorizer.transform(X_test_texts)
 
     # 小范围网格搜索
@@ -221,28 +232,74 @@ def main():
     rows = []
     best = None
     for config in grid:
-        preds, acc, f1 = train_one_config(X_train, y_train, X_test, y_test, config)
+        preds, acc, f1 = train_one_config(X_train, y_train, X_val, y_val, config)
         rows.append({
+            "model_name": "mlp",
+            "feature_type": "tfidf",
+            "tuning_method": "holdout_validation",
+            "selection_score_name": "val_f1_macro",
+            "selection_score": f1,
+            "val_accuracy": acc,
+            "val_f1_macro": f1,
+            "test_accuracy": np.nan,
+            "test_f1_macro": np.nan,
+            "alpha": np.nan,
+            "var_smoothing": np.nan,
+            "n_estimators": np.nan,
+            "max_depth": np.nan,
+            "max_features": np.nan,
             "hidden1": config["hidden1"],
             "hidden2": config["hidden2"],
             "dropout": config["dropout"],
             "lr": config["lr"],
             "epochs": config["epochs"],
-            "test_accuracy": acc,
-            "test_f1_macro": f1,
+            "is_best": 0,
         })
-        if best is None or f1 > best["test_f1_macro"]:
+        if best is None or f1 > best["val_f1_macro"]:
             best = rows[-1]
 
         print(
-            f"MLP config={config} test_acc={acc:.4f} test_f1_macro={f1:.4f}"
+            f"MLP config={config} val_acc={acc:.4f} val_f1_macro={f1:.4f}"
         )
-        print_report(y_test, preds, {0: "消极", 1: "积极"})
+        print_report(y_val, preds, {0: "消极", 1: "积极"})
+
+    # 使用最佳参数在训练集+验证集上重新训练，并在测试集做最终评估。
+    best_config = {
+        "hidden1": best["hidden1"],
+        "hidden2": best["hidden2"],
+        "dropout": best["dropout"],
+        "lr": best["lr"],
+        "epochs": best["epochs"],
+    }
+    X_train_val = vectorizer.fit_transform(X_train_val_texts)
+    X_test = vectorizer.transform(X_test_texts)
+    test_preds, test_acc, test_f1 = train_one_config(
+        X_train_val, y_train_val, X_test, y_test, best_config
+    )
+
+    print(f"Best config on val set: {best_config}")
+    print(f"Final test acc={test_acc:.4f} test_f1_macro={test_f1:.4f}")
+    print_report(y_test, test_preds, {0: "消极", 1: "积极"})
+
+    for row in rows:
+        if (
+            row["hidden1"] == best_config["hidden1"]
+            and row["hidden2"] == best_config["hidden2"]
+            and row["dropout"] == best_config["dropout"]
+            and row["lr"] == best_config["lr"]
+            and row["epochs"] == best_config["epochs"]
+        ):
+            row["test_accuracy"] = test_acc
+            row["test_f1_macro"] = test_f1
+            row["is_best"] = 1
+        else:
+            row["test_accuracy"] = None
+            row["test_f1_macro"] = None
 
     # 保存指标表
     pd.DataFrame(rows).to_csv(RESULTS_PATH, index=False, encoding="utf-8")
     print(f"Saved metrics to: {RESULTS_PATH}")
-    print(f"Best config (by f1_macro): {best}")
+    print(f"Best config (by val_f1_macro): {best_config}")
 
 
 if __name__ == "__main__":
