@@ -31,6 +31,24 @@ old_chart = None
 with open(STOPLIST_PATH, 'r', encoding='UTF-8') as stop_path:
     stop_words = set(stop_path.read().split())
 
+
+def resolve_chinese_font():
+    # 优先使用项目内字体，其次尝试系统常见中文字体。
+    candidate_paths = [
+        os.path.join(ROOT_DIR, "simhei.ttf"),
+        os.path.join(ROOT_DIR, "resources", "simhei.ttf"),
+        r"C:\Windows\Fonts\simhei.ttf",
+        r"C:\Windows\Fonts\msyh.ttc",
+        r"C:\Windows\Fonts\simsun.ttc",
+    ]
+    for path in candidate_paths:
+        if os.path.exists(path):
+            return path
+    return None
+
+
+CHINESE_FONT_PATH = resolve_chinese_font()
+
 # 获取URL的后十一位字符的函数
 def get_lasteleven(n_url):
     # 返回URL的最后11个字符（凤凰新闻评论接口需要）
@@ -296,8 +314,18 @@ def analyze_sentiment():
         X_new_test_tokenized = X_new_test.apply(clean_and_segment_text)
         # 将分词结果拼接为大字符串
         text = ' '.join(X_new_test_tokenized)
-        wordcloud = WordCloud(font_path='simhei.ttf', width=800, height=400, background_color='white').generate(
-            text)
+        if not text.strip():
+            messagebox.showwarning("提示", "词云生成失败：清洗后的文本为空。")
+            return
+        if CHINESE_FONT_PATH is None:
+            messagebox.showerror("错误", "未找到可用的中文字体文件，无法生成词云。")
+            return
+        wordcloud = WordCloud(
+            font_path=CHINESE_FONT_PATH,
+            width=800,
+            height=400,
+            background_color='white'
+        ).generate(text)
         wordcloud_image = wordcloud.to_image()
         wordcloud_image_tk = ImageTk.PhotoImage(image=wordcloud_image)
         label.config(image=wordcloud_image_tk)

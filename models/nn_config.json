@@ -1,0 +1,8 @@
+{
+  "input_dim": 20000,
+  "hidden1": 256,
+  "hidden2": 128,
+  "dropout": 0.5,
+  "lr": 0.001,
+  "epochs": 5
+}
