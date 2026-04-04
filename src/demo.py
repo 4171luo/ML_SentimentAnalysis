@@ -7,6 +7,7 @@ import joblib
 import numpy as np
 import urllib.parse
 import torch
+from gensim.models import Word2Vec
 from PIL import ImageTk
 from wordcloud import WordCloud
 import pandas as pd
@@ -125,6 +126,27 @@ def load_model_and_predict(model_path, X_test_vect):
     return model.predict(X_test_vect)
 
 
+def average_word_vectors(tokens, model, vector_size):
+    # 将评论中的词向量平均成固定长度句向量。
+    vec = np.zeros(vector_size, dtype="float32")
+    count = 0
+    for token in tokens:
+        if token in model.wv:
+            vec += model.wv[token]
+            count += 1
+    if count:
+        vec /= count
+    return vec
+
+
+def build_word2vec_features(tokenized_texts, model):
+    # 将空格分隔文本转换为平均词向量特征。
+    return np.vstack([
+        average_word_vectors(text.split(), model, model.vector_size)
+        for text in tokenized_texts
+    ])
+
+
 def build_mlp(input_dim, hidden1, hidden2, dropout):
     # 与训练脚本保持一致的两层 MLP 结构。
     return nn.Sequential(
@@ -241,9 +263,9 @@ def analyze_sentiment():
             model_path = os.path.join(MODELS_DIR, "naive_bayes.pkl")
             required_paths = [vect_path, model_path]
         elif selected_algorithm == "随机森林":
-            vect_path = os.path.join(MODELS_DIR, "rf_tfidf_vectorizer.pkl")
-            model_path = os.path.join(MODELS_DIR, "random_forest.pkl")
-            required_paths = [vect_path, model_path]
+            w2v_path = os.path.join(MODELS_DIR, "rf_word2vec.model")
+            model_path = os.path.join(MODELS_DIR, "rf_word2vec_model.pkl")
+            required_paths = [w2v_path, model_path]
         elif selected_algorithm == "MLP":
             vect_path = os.path.join(MODELS_DIR, "nn_tfidf_vectorizer.pkl")
             config_path = os.path.join(MODELS_DIR, "nn_config.json")
@@ -260,11 +282,17 @@ def analyze_sentiment():
             messagebox.showerror("错误", f"缺少模型文件，请先完成训练并保存：\n{missing_text}")
             return
 
-        vect = joblib.load(vect_path)
-        X_new_test_vect = vect.transform(X_new_test_tokenized)
         if selected_algorithm == "MLP":
+            vect = joblib.load(vect_path)
+            X_new_test_vect = vect.transform(X_new_test_tokenized)
             new_predictions = load_mlp_and_predict(config_path, model_path, X_new_test_vect)
+        elif selected_algorithm == "随机森林":
+            w2v_model = Word2Vec.load(w2v_path)
+            X_new_test_vect = build_word2vec_features(X_new_test_tokenized, w2v_model)
+            new_predictions = load_model_and_predict(model_path, X_new_test_vect)
         else:
+            vect = joblib.load(vect_path)
+            X_new_test_vect = vect.transform(X_new_test_tokenized)
             new_predictions = load_model_and_predict(model_path, X_new_test_vect)
 
         # 预测情感并将结果映射为中文标签
@@ -291,7 +319,7 @@ def analyze_sentiment():
             old_chart.get_tk_widget().destroy()
         plt.rcParams['font.sans-serif'] = ['SimHei']  # 设置字体为黑体
         plt.rcParams['axes.unicode_minus'] = False  # 正确显示负号
-        fig, ax = plt.subplots(figsize=(8, 4))
+        fig, ax = plt.subplots(figsize=(8, 3.2))
         # 绘制折线图
         ax.plot(daily_comment_count.index, daily_comment_count.values, marker='o', linestyle='-', color='b')
         ax.set_xlabel('日期')
@@ -339,7 +367,7 @@ def analyze_sentiment():
     url_label = tk.Label(root, text="请输入 URL 或 文件名: ")
     url_entry = tk.Entry(root, width=160, font=custom_font)
     algorithm_combobox = ttk.Combobox(root, values=["朴素贝叶斯", "随机森林", "MLP"], font=custom_font)
-    result_text = tk.Text(root, height=20, width=160, font=custom_font)
+    result_text = tk.Text(root, height=16, width=160, font=custom_font)
     analyze_button = tk.Button(root, text="分析情感", command=fetch_and_analyze)
     label = tk.Label(root)  # 用于显示词云图像的标签
 
