@@ -1,59 +1,219 @@
-# 此为本人本科毕业设计，仅供大家参考
-### 使用SKLearn，WordCloud等库完成
-### 具体演示视频可以看我发在bilibili上的视频 P1 大概五分半开始的演示
-### [【[毕设] 基于机器学习的新闻评论情感分析方法研究】](https://www.bilibili.com/video/BV1j142197rt/?share_source=copy_web&vd_source=35c49b46a86899e58b3f6414dd834db3)
-## ⚠⚠⚠ NEWS!
-### 新增论文： [基于机器学习的新闻评论情感分析方法研究-论文定稿.pdf](基于机器学习的新闻评论情感分析方法研究-论文定稿.pdf)
-### 新增PPT：  [基于机器学习的新闻评论情感分析方法研究-答辩PPT.pptx](基于机器学习的新闻评论情感分析方法研究-答辩PPT.pptx)
-### 推荐将论文和PPT下载后再打开或编辑，尽管PPT嵌入了字体但是还是会出现字体显示错误的问题，可以自行更换显示错误的字体。
-# 环境配置
-### 这里以conda创建虚拟环境为例，如果你是使用conda创建虚拟环境，就从这里开始
+# 基于机器学习的新闻评论情感分析
+
+本项目是毕业设计实现代码。任务目标是对中文新闻评论进行情感二分类，并提供可演示的桌面端界面。项目包含数据预处理、模型训练、结果对比、最终模型保存、评论抓取、前端预测与可视化展示几个部分。
+
+## 1. 项目概览
+
+项目当前包含三类模型：
+
+- 朴素贝叶斯
+- 随机森林
+- MLP 两层神经网络
+
+项目当前使用两类文本特征：
+
+- TF-IDF
+- Word2Vec 平均词向量
+
+其中：
+
+- 朴素贝叶斯支持 `TF-IDF` 和 `Word2Vec`
+- 随机森林支持 `TF-IDF` 和 `Word2Vec`
+- MLP 使用 `TF-IDF`
+
+## 2. 目录结构
+
+```text
+ML_SentimentAnalysis/
+├─ data/
+│  ├─ train/                 # 训练数据
+│  └─ test/                  # 测试评论样本与爬取结果
+├─ docs/
+│  ├─ 第四章图表/            # 论文第4章图表输出
+│  └─ 特征示例表/            # TF-IDF示例表与高权重词示例表
+├─ models/                   # 训练完成后的模型文件
+├─ resources/                # 停用词表、词表等资源文件
+├─ results/                  # 实验结果CSV
+├─ src/                      # 源代码
+├─ README.md
+└─ requirements.txt
+```
+
+## 3. 数据文件说明
+
+### 3.1 训练数据
+
+- `data/train/weibo_senti_100k.csv`
+- 来源：`weibo_senti_100k`
+- 字段：
+  - `label`：情感标签
+  - `review`：评论文本
+
+### 3.2 测试数据
+
+- `data/test/test*.csv`
+- 字段：
+  - `uname`
+  - `create_time`
+  - `comment_contents`
+
+这些文件可以由 `src/spider.py` 抓取新闻评论后生成，也可以直接作为前端测试输入。
+
+## 4. 主要代码文件说明
+
+### 4.1 训练脚本
+
+- `src/train_nb.py`
+  - 朴素贝叶斯训练脚本
+  - 对比 `TF-IDF + MultinomialNB` 与 `Word2Vec + GaussianNB`
+
+- `src/train_rf.py`
+  - 随机森林训练脚本
+  - 对比 `TF-IDF` 与 `Word2Vec`
+
+- `src/train_nn.py`
+  - MLP 训练脚本
+  - 使用 `TF-IDF` 作为输入特征
+
+### 4.2 模型保存脚本
+
+- `src/save_final_models.py`
+  - 根据 `results/` 中的最优结果重新训练全量模型
+  - 将最终可部署模型保存到 `models/`
+
+### 4.3 前端与爬虫
+
+- `src/demo.py`
+  - Tkinter 图形界面
+  - 支持输入新闻 URL 或本地 CSV
+  - 支持选择模型并展示预测结果、折线图、词云图
+
+- `src/spider.py`
+  - 凤凰新闻评论抓取脚本
+  - 将评论保存到 `data/test/`
+
+### 4.4 论文图表脚本
+
+- `src/plot_dataset_distribution.py`
+  - 生成图4-1 数据集正负样本分布图
+  - 输出到 `docs/第四章图表/`
+
+- `src/plot_tfidf_top_terms.py`
+  - 生成图4-2 TF-IDF Top-N词项柱状图
+  - 输出到 `docs/第四章图表/`
+
+## 5. 资源与结果文件说明
+
+### 5.1 资源文件
+
+- `resources/stoplist.txt`
+  - 中文停用词表
+
+- `resources/vocab.txt`
+  - 词表资源
+
+### 5.2 实验结果
+
+- `results/nb_metrics.csv`
+  - 朴素贝叶斯实验结果
+
+- `results/rf_grid.csv`
+  - 随机森林网格搜索结果
+
+- `results/nn_metrics.csv`
+  - MLP 实验结果
+
+### 5.3 论文素材
+
+- `docs/第四章图表/图4-1_数据集正负样本分布图.png`
+- `docs/第四章图表/图4-2_TF-IDF Top-N词项柱状图.png`
+- `docs/特征示例表/TF-IDF示例表.csv`
+- `docs/特征示例表/TF-IDF示例表.xlsx`
+- `docs/特征示例表/TF-IDF高权重词示例.csv`
+- `docs/特征示例表/TF-IDF高权重词示例.xlsx`
+
+## 6. 环境配置
+
+建议使用 Python 3.12。
+
+### 6.1 创建虚拟环境
+
 ```bash
-conda create -n ML python=3.12 #这里的ML可以是自定义的环境名
+conda create -n ML python=3.12
 conda activate ML
 ```
-### 如果你使用的不是conda，就从这里开始，如果你使用的是conda，那就继续
-### 确保你现在在项目根目录
+
+### 6.2 安装依赖
+
 ```bash
 pip install -r requirements.txt
 ```
-### 如果出现网络问题，可以尝试使用镜像
+
+如果下载较慢，可以使用镜像：
+
 ```bash
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
-# 文件说明
-### 训练数据集：`data/train/weibo_senti_100k.csv`，来自 https://github.com/SophonPlus/ChineseNlpCorpus/tree/master/datasets/weibo_senti_100k
 
-### 测试数据集：`data/test/test*.csv`，由 `src/spider.py` 爬取生成
+### 6.3 补充说明
 
-### 停用词：`resources/stoplist.txt`
+`requirements.txt` 中当前未包含 `torch`。如果需要训练或加载 MLP 模型，请额外安装 PyTorch。
 
-### 训练脚本：`src/train_nb.py`（朴素贝叶斯）、`src/train_rf.py`（随机森林）、`src/train_nn.py`（两层 MLP）
-### 指标输出：`results/nb_metrics.csv`、`results/rf_grid.csv`、`results/nn_metrics.csv`
+## 7. 使用方法
 
-### 前端入口：`src/demo.py`
+### 7.1 训练模型
 
-### 模型输出：`models/`（如 `tfidf_vectorizer.pkl`、`naive_bayes.pkl`、`random_forest.pkl`）
-
-# 使用方法
-
-### 训练模型（8:2，TF-IDF 与 Word2vec 对比；MLP 使用 TF-IDF）
 ```bash
 python src/train_nb.py
 python src/train_rf.py
 python src/train_nn.py
 ```
 
-### 使用TKInter完成前端编写，运行 `src/demo.py`，即可使用。页面包括链接输入框、模型选择下拉栏、预测输出框，以及折线图和词云图。
+### 7.2 保存最终部署模型
 
-### 选择训练好的模型，再输入 `data/test/test.csv` 或在线凤凰新闻网址，例如：https://sports.ifeng.com/c/8YRoRaeBxRf ，即可输出预测结果。
+```bash
+python src/save_final_models.py
+```
 
+运行完成后，最终模型会保存到 `models/`。
 
-# 学习路径
-参考B站 [黑马程序员Python教程，4天快速入门Python数据挖掘，系统精讲+实战案例](https://www.bilibili.com/video/BV1xt411v7z9/?share_source=copy_web&vd_source=35c49b46a86899e58b3f6414dd834db3)
+### 7.3 启动前端演示
 
-参考B站 [黑马程序员3天快速入门python机器学习](https://www.bilibili.com/video/BV1nt411r7tj/?share_source=copy_web)
+```bash
+python src/demo.py
+```
 
-参考B站 [尚硅谷Python爬虫教程小白零基础速通（含python基础+爬虫案例）](https://www.bilibili.com/video/BV1Db4y1m7Ho/?share_source=copy_web&vd_source=35c49b46a86899e58b3f6414dd834db3)
+前端支持两种输入方式：
 
-和ChatGPT的辅助完成，仅供大家参考
+- 输入本地 CSV 文件路径
+- 输入凤凰新闻 URL，程序自动抓取评论后分析
+
+### 7.4 生成论文图表
+
+生成图4-1：
+
+```bash
+python src/plot_dataset_distribution.py
+```
+
+生成图4-2：
+
+```bash
+python src/plot_tfidf_top_terms.py
+```
+
+## 8. 当前默认模型文件
+
+`models/` 目录中当前保存了以下主要文件：
+
+- 朴素贝叶斯模型及向量器
+- 随机森林模型及向量器
+- Word2Vec 模型
+- MLP 权重文件
+- MLP 配置文件
+
+这些文件可直接供 `src/demo.py` 调用。
+
+## 9. 说明
+
+本项目当前的训练集来自微博情感数据，前端演示测试数据主要来自新闻评论。两者场景不同，后续撰写论文时应如实说明数据来源与任务关系。
