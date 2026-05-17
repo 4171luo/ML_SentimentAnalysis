@@ -11,7 +11,7 @@ except ModuleNotFoundError:
     jieba = None
 
 BASE_DIR = os.path.dirname(__file__)
-ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 STOPLIST_PATH = os.path.join(ROOT_DIR, "resources", "stoplist.txt")
 INPUT_PATH = os.path.join(ROOT_DIR, "data", "test", "test.csv")
 OUTPUT_PATH = os.path.join(ROOT_DIR, "docs", "第四章图表", "图4-2_TF-IDF Top-N词项柱状图.png")

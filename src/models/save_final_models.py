@@ -15,7 +15,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 BASE_DIR = os.path.dirname(__file__)
-ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 DATA_PATH = os.path.join(ROOT_DIR, "data", "train", "weibo_senti_100k.csv")
 STOPLIST_PATH = os.path.join(ROOT_DIR, "resources", "stoplist.txt")
 MODELS_DIR = os.path.join(ROOT_DIR, "models")

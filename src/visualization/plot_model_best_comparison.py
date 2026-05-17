@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 BASE_DIR = os.path.dirname(__file__)
-ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 NB_PATH = os.path.join(ROOT_DIR, "results", "nb_metrics.csv")
 RF_PATH = os.path.join(ROOT_DIR, "results", "rf_grid.csv")
 NN_PATH = os.path.join(ROOT_DIR, "results", "nn_metrics.csv")

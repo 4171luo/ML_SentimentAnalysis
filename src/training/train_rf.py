@@ -10,7 +10,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score, precision_recall_fscore_support
 
 BASE_DIR = os.path.dirname(__file__)
-ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 DATA_PATH = os.path.join(ROOT_DIR, "data", "train", "weibo_senti_100k.csv")
 STOPLIST_PATH = os.path.join(ROOT_DIR, "resources", "stoplist.txt")
 RESULTS_PATH = os.path.join(ROOT_DIR, "results", "rf_grid.csv")

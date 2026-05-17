@@ -22,7 +22,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from torch import nn
 
 BASE_DIR = os.path.dirname(__file__)
-ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 DATA_TEST_DIR = os.path.join(ROOT_DIR, "data", "test")
 MODELS_DIR = os.path.join(ROOT_DIR, "models")
 STOPLIST_PATH = os.path.join(ROOT_DIR, "resources", "stoplist.txt")

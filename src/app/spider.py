@@ -6,7 +6,7 @@ import urllib.parse
 from datetime import datetime
 
 BASE_DIR = os.path.dirname(__file__)
-ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 DATA_TEST_DIR = os.path.join(ROOT_DIR, "data", "test")
 
 def get_lasteleven(n_url):

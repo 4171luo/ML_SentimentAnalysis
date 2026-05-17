@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 BASE_DIR = os.path.dirname(__file__)
-ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 RESULT_PATH = os.path.join(ROOT_DIR, "results", "rf_grid.csv")
 OUTPUT_PATH = os.path.join(
     ROOT_DIR, "docs", "第四章图表", "图4-5_随机森林模型两种特征下的性能对比图.png"

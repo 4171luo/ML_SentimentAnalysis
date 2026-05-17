@@ -57,48 +57,48 @@ ML_SentimentAnalysis/
   - `create_time`
   - `comment_contents`
 
-这些文件可以由 `src/spider.py` 抓取新闻评论后生成，也可以直接作为前端测试输入。
+这些文件可以由 `src/app/spider.py` 抓取新闻评论后生成，也可以直接作为前端测试输入。
 
 ## 4. 主要代码文件说明
 
 ### 4.1 训练脚本
 
-- `src/train_nb.py`
+- `src/training/train_nb.py`
   - 朴素贝叶斯训练脚本
   - 对比 `TF-IDF + MultinomialNB` 与 `Word2Vec + GaussianNB`
 
-- `src/train_rf.py`
+- `src/training/train_rf.py`
   - 随机森林训练脚本
   - 对比 `TF-IDF` 与 `Word2Vec`
 
-- `src/train_nn.py`
+- `src/training/train_nn.py`
   - MLP 训练脚本
   - 使用 `TF-IDF` 作为输入特征
 
 ### 4.2 模型保存脚本
 
-- `src/save_final_models.py`
+- `src/models/save_final_models.py`
   - 根据 `results/` 中的最优结果重新训练全量模型
   - 将最终可部署模型保存到 `models/`
 
 ### 4.3 前端与爬虫
 
-- `src/demo.py`
+- `src/app/demo.py`
   - Tkinter 图形界面
   - 支持输入新闻 URL 或本地 CSV
   - 支持选择模型并展示预测结果、折线图、词云图
 
-- `src/spider.py`
+- `src/app/spider.py`
   - 凤凰新闻评论抓取脚本
   - 将评论保存到 `data/test/`
 
 ### 4.4 论文图表脚本
 
-- `src/plot_dataset_distribution.py`
+- `src/visualization/plot_dataset_distribution.py`
   - 生成图4-1 数据集正负样本分布图
   - 输出到 `docs/第四章图表/`
 
-- `src/plot_tfidf_top_terms.py`
+- `src/visualization/plot_tfidf_top_terms.py`
   - 生成图4-2 TF-IDF Top-N词项柱状图
   - 输出到 `docs/第四章图表/`
 
@@ -164,15 +164,15 @@ pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ### 7.1 训练模型
 
 ```bash
-python src/train_nb.py
-python src/train_rf.py
-python src/train_nn.py
+python src/training/train_nb.py
+python src/training/train_rf.py
+python src/training/train_nn.py
 ```
 
 ### 7.2 保存最终部署模型
 
 ```bash
-python src/save_final_models.py
+python src/models/save_final_models.py
 ```
 
 运行完成后，最终模型会保存到 `models/`。
@@ -180,7 +180,7 @@ python src/save_final_models.py
 ### 7.3 启动前端演示
 
 ```bash
-python src/demo.py
+python src/app/demo.py
 ```
 
 前端支持两种输入方式：
@@ -193,13 +193,13 @@ python src/demo.py
 生成图4-1：
 
 ```bash
-python src/plot_dataset_distribution.py
+python src/visualization/plot_dataset_distribution.py
 ```
 
 生成图4-2：
 
 ```bash
-python src/plot_tfidf_top_terms.py
+python src/visualization/plot_tfidf_top_terms.py
 ```
 
 ## 8. 当前默认模型文件
@@ -212,7 +212,7 @@ python src/plot_tfidf_top_terms.py
 - MLP 权重文件
 - MLP 配置文件
 
-这些文件可直接供 `src/demo.py` 调用。
+这些文件可直接供 `src/app/demo.py` 调用。
 
 ## 9. 说明
 

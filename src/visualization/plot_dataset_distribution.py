@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 BASE_DIR = os.path.dirname(__file__)
-ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 DATA_PATH = os.path.join(ROOT_DIR, "data", "train", "weibo_senti_100k.csv")
 OUTPUT_PATH = os.path.join(ROOT_DIR, "docs", "第四章图表", "图4-1_数据集正负样本分布图.png")
 
